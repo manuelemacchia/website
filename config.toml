@@ -1,0 +1,4 @@
+baseURL = "https://manuelemacchia.com/"
+languageCode = "en-us"
+title = "Manuele Macchia"
+theme = "showcase"

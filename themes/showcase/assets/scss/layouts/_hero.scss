@@ -1,0 +1,73 @@
+@use '../common/colors';
+@use '../common/dimensions';
+
+#hero {
+    padding-top: 2.5em;
+    padding-bottom: 3em;
+    margin-bottom: 6em;
+    max-width: 830px;
+
+    @media(max-width: dimensions.$maxwidthMobile) {
+        margin-bottom: 3em;
+    }
+
+    h1 {
+        margin-bottom: 1em;
+
+        a {
+            text-decoration: none;
+            transition: all 100ms ease-in-out;
+
+            &:nth-of-type(1) { color: colors.$hero-1; }
+            &:nth-of-type(2) { color: colors.$hero-2; }
+            &:nth-of-type(3) { color: colors.$hero-3; }
+            &:nth-of-type(4) { color: colors.$hero-4; }
+            &:nth-of-type(5) { color: colors.$hero-5; }
+
+            &:hover {
+                cursor: pointer;
+                transition: all 100ms ease-in-out;
+
+                &:nth-of-type(1) { color: colors.$hero-hover-1;    background-color: colors.$hero-hover-bg-1; }
+                &:nth-of-type(2) { color: colors.$hero-hover-2;  background-color: colors.$hero-hover-bg-2; }
+                &:nth-of-type(3) { color: colors.$hero-hover-3;  background-color: colors.$hero-hover-bg-3; }
+                &:nth-of-type(4) { color: colors.$hero-hover-4;   background-color: colors.$hero-hover-bg-4; }
+                &:nth-of-type(5) { color: colors.$hero-hover-5;    background-color: colors.$hero-hover-bg-5; }
+
+            }
+        }
+    }
+
+    .cropper {
+        width: 200px;
+        height: 200px;
+        
+        @media(max-width: dimensions.$maxwidthTablet) {
+            width: 160px;
+            height: 160px;
+        }
+
+        @media(max-width: dimensions.$maxwidthMobile) {
+            width: 120px;
+            height: 120px;
+        }
+        
+        position: relative;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+
+    .profile {
+        display: inline;
+        margin: 0 auto;
+        height: 100%;
+        width: auto;
+    }
+
+    p {
+        // Blackfriday adds <p> tags to _index.md contents.
+        // This removes automatic margin/padding applied by browsers to <p> elements.
+        margin: 0;
+        padding: 0;
+    }
+}
