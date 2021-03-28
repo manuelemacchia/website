@@ -1,0 +1,22 @@
+name: publish-site
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push directory to another repository
+        uses: cpina/github-action-push-to-another-repository@v1.2
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        with:
+          source-directory: 'public'
+          destination-github-username: 'manuelemacchia'
+          destination-repository-name: 'manuelemacchia.github.io'
+          target-branch: main
+          user-email: macchiamanuele@gmail.com
