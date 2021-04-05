@@ -41,4 +41,4 @@ git status
 
 git diff-index --quiet HEAD || git commit --message "Update site"
 
-# git push origin
+git push origin
