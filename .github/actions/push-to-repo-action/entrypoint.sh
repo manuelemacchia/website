@@ -1,5 +1,8 @@
 #!/bin/sh -l
 
+# Based on cpina/github-action-push-to-another-repository
+# https://github.com/cpina/github-action-push-to-another-repository
+
 set -e  # if a command fails it stops the execution
 set -u  # script fails if trying to access to an undefined variable
 
