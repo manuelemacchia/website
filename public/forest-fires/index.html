@@ -256,7 +256,12 @@ pre code {
 <li><a href="#decision-tree"><span class="toc-section-number">5.2</span> Decision tree</a></li>
 <li><a href="#random-forest"><span class="toc-section-number">5.3</span> Random forest</a></li>
 </ul></li>
-<li><a href="#conclusion"><span class="toc-section-number">6</span> Conclusion</a></li>
+<li><a href="#random-forest-classification"><span class="toc-section-number">6</span> Random forest classification</a>
+<ul>
+<li><a href="#theoretical-framework-3"><span class="toc-section-number">6.1</span> Theoretical framework</a></li>
+<li><a href="#random-forest-1"><span class="toc-section-number">6.2</span> Random forest</a></li>
+</ul></li>
+<li><a href="#conclusion"><span class="toc-section-number">7</span> Conclusion</a></li>
 <li><a href="#references">References</a></li>
 </ul>
 </div>
@@ -1360,10 +1365,111 @@ plot_grid(rftep, rftep_zoom, nrow=1, ncol=2)</code></pre>
 <p>Unfortunately, our random forest appears to consistently underestimate the area burned by forest fires, as larger fires go undetected. This model is not able to reliably predict the response based on the predictors at our disposal.</p>
 </div>
 </div>
-<div id="conclusion" class="section level1" number="6">
-<h1 number="6"><span class="header-section-number">6</span> Conclusion</h1>
+<div id="random-forest-classification" class="section level1" number="6">
+<h1 number="6"><span class="header-section-number">6</span> Random forest classification</h1>
+<p>Finally, we move back to the binary classification problem of predicting whether the fire is small or large, given a set of observations. Our goal is to apply a random forest classification model and compare its performance to that of logistic regression.</p>
+<div id="theoretical-framework-3" class="section level2" number="6.1">
+<h2 number="6.1"><span class="header-section-number">6.1</span> Theoretical framework</h2>
+<p>In the context of classification, decision trees are built via recursive binary splitting, albeit with a different metric for choosing the best split among the various possibilities.</p>
+<p>In particular, we use the <em>Gini index</em> to evaluate the quality of candidate splits. The higher the Gini index associated to a node, the higher the impurity of that node. Our goal is to find splits that minimize the impurity of child nodes.</p>
+<p>The Gini index for a given node <span class="math inline">\(t\)</span> is defined as <span class="math inline">\(\text{Gini}(t) = 1 - \sum_c f(c|t)^2\)</span>, where <span class="math inline">\(f(c|t)\)</span> is the relative frequency of class <span class="math inline">\(c\)</span> at node <span class="math inline">\(t\)</span>.</p>
+<p>The prediction for the <span class="math inline">\(j\)</span>-th region is the most frequently occurring class among the training samples that fall inside the region.</p>
+</div>
+<div id="random-forest-1" class="section level2" number="6.2">
+<h2 number="6.2"><span class="header-section-number">6.2</span> Random forest</h2>
+<p>As a first attempt, we fit a random forest classifier on our training data with 500 trees and 4 predictors to evaluate at each split.</p>
+<pre class="r"><code>set.seed(42)  # For reproducibility
+
+default.clf.rf &lt;- ranger(
+  areabinary ~ X + Y + month + isweekend + FFMC + DMC + DC + ISI + temp + RH + wind,
+  data=fires,
+  num.trees=500,
+  mtry=4,
+  max.depth=0
+)
+
+default.clf.rf</code></pre>
+<pre><code>## Ranger result
+## 
+## Call:
+##  ranger(areabinary ~ X + Y + month + isweekend + FFMC + DMC +      DC + ISI + temp + RH + wind, data = fires, num.trees = 500,      mtry = 4, max.depth = 0) 
+## 
+## Type:                             Classification 
+## Number of trees:                  500 
+## Sample size:                      413 
+## Number of independent variables:  11 
+## Mtry:                             4 
+## Target node size:                 1 
+## Variable importance mode:         none 
+## Splitrule:                        gini 
+## OOB prediction error:             40.92 %</code></pre>
+<p>We are now considering a classification problem, therefore the call output shows the OOB prediction error instead of the OOB MSR and <span class="math inline">\(R^2\)</span>.</p>
+<p>The OOB prediction error shows promising results, given this is a difficult classification task. We perform a grid search to choose the optimal combination of maximum tree depth and number of predictors to consider at each split <span class="math inline">\(m\)</span>, such that the estimated generalization error is the lowest.</p>
+<pre class="r"><code>grid.results &lt;- data.frame(matrix(ncol=3, nrow=0))
+colnames(grid.results) &lt;- c(&quot;maxdepth&quot;, &quot;mtry&quot;, &quot;ooberror&quot;)
+
+grid.maxdepth &lt;- c(2, 3, 4, 5, 10, 20, 50, 100)
+grid.mtry &lt;- c(2:11)
+
+set.seed(123)
+
+for (md in grid.maxdepth) {
+  for (mt in grid.mtry) {
+    fit.rf &lt;- ranger(
+      areabinary ~ X + Y + month + isweekend + FFMC + DMC + DC + ISI + temp + RH + wind,
+      data=fires,
+      num.trees=500,
+      mtry=mt,
+      max.depth=md,
+    )
+
+    ooberror &lt;- tail(fit.rf$prediction.error, 1)
+
+    grid.results[nrow(grid.results)+1, ] = c(md, mt, ooberror)
+  }
+}
+
+print(head(grid.results[order(grid.results$ooberror, decreasing=F), ], n=10))</code></pre>
+<pre><code>##    maxdepth mtry  ooberror
+## 62       50    3 0.3898305
+## 66       50    7 0.3898305
+## 79      100   10 0.3898305
+## 47       10    8 0.3946731
+## 51       20    2 0.3946731
+## 55       20    6 0.3946731
+## 75      100    6 0.3946731
+## 56       20    7 0.3970944
+## 77      100    8 0.3970944
+## 53       20    4 0.3995157</code></pre>
+<p>According to these results, we have three different combinations which yield the same lowest OOB prediction error. The typical choice of <span class="math inline">\(m\)</span> for classification tasks is <span class="math inline">\(\sqrt{p}\)</span> which, in our case, is around 3. Therefore, we choose to fit a random forest classifier with <span class="math inline">\(m\)</span> equal to 3 and maximum tree depth equal to 50 and evaluate its performance on test data.</p>
+<pre class="r"><code>set.seed(69)
+
+best.clf.rf &lt;- ranger(
+  areabinary ~ X + Y + month + isweekend + FFMC + DMC + DC + ISI + temp + RH + wind,
+  data=fires,
+  num.trees=500,
+  mtry=3,
+  max.depth=50
+)
+
+best.clf.rf.test.preds &lt;- predict(best.clf.rf, fires.test)$predictions
+  
+cm &lt;- confusionMatrix(best.clf.rf.test.preds, fires.test$areabinary)
+print(cm$table)</code></pre>
+<pre><code>##           Reference
+## Prediction  0  1
+##          0 28 21
+##          1 18 37</code></pre>
+<pre class="r"><code>print(cm$overall[&quot;Accuracy&quot;])</code></pre>
+<pre><code>## Accuracy 
+##    0.625</code></pre>
+<p>The results on the test set show that a random forest is more capable of modeling the relationship between the predictors and the size of the fire, compared to our logistic regression model. However, more advanced methods may be required to further increase predictive performance.</p>
+</div>
+</div>
+<div id="conclusion" class="section level1" number="7">
+<h1 number="7"><span class="header-section-number">7</span> Conclusion</h1>
 <p>In this work, we attempt to predict the burned area of forest fires with weather data. Using this kind of data is advantageous, as it can be collected in real time and at a lower cost with respect to other techniques.</p>
-<p>Firstly, we build and evaluate several linear regression models, reaching mediocre results. Then, we try to solve a simplified version of the problem, namely predicting whether a forest fire is bigger or smaller than a given threshold. Finally, we go back to the original regression problem and adopt a non-linear model, a random forest, and compare its performance to that of linear models.</p>
+<p>Firstly, we build and evaluate several linear regression models, reaching mediocre results. Then, we solve a simplified version of the problem, namely predicting whether a forest fire is bigger or smaller than a given threshold, by employing a logistic regression model. We go back to the original regression problem and adopt a non-linear model, a random forest, and compare its performance to that of linear models. Finally, we build a random forest classifier to solve the simplified binary classification task and compare it to the logistic regression model.</p>
 <p>Unfortunately, our models are not able to predict the area burned by forest fires in a satisfactory manner using the data at our disposal. This is a difficult regression task, and more advanced techniques may be necessary to build useful predictive models. Moreover, as highlighted by <span class="citation"><a href="#ref-cortez" role="doc-biblioref">Cortez and Morais</a> (<a href="#ref-cortez" role="doc-biblioref">2007</a>)</span>, additional information is required, such as the type of vegetation and firefighting intervention, which is not included in this dataset.</p>
 <p>Nonetheless, the linear models are able to give some useful insights on the relationship between predictors and response. They are especially useful to understand what are the variables that influence the area of forest fires, and to estimate how much they affect the response.</p>
 </div>
